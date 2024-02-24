@@ -1,79 +1,104 @@
-// scripts.js
+import { HandLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0";
 
-document.addEventListener('DOMContentLoaded', function () {
-    const videoElement = document.getElementById('videoElement');
-    const canvasElement = document.getElementById('canvasElement');
-    const ctx = canvasElement.getContext('2d');
-    let isModelLoaded = false;
+const demosSection = document.getElementById("demos");
 
-    // Load the MediaPipe Hands model
-    window.MediaPipe.Hands.load()
-        .then(function (hands) {
-            const poseNet = new PoseNet(hands);
-            poseNet.run(videoElement, canvasElement, ctx);
-            isModelLoaded = true;
-        })
-        .catch(function (err) {
-            console.error('Error loading model:', err);
-        });
+let handLandmarker;
+let runningMode = "IMAGE";
+let enableWebcamButton;
+let webcamRunning = false;
 
-    // Check if the model is loaded and display a message if not
-    setInterval(function () {
-        if (!isModelLoaded) {
-            ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            ctx.font = '20px Arial';
-            ctx.fillStyle = 'red';
-            ctx.fillText('Loading model, please wait...', 10, 30);
-        }
-    }, 1000);
-});
+const HAND_CONNECTIONS = [
+  [0, 1], [1, 2], [2, 3], [3, 4], [5, 6], [6, 7], [7, 8], [9, 10],
+  [10, 11], [11, 12], [13, 14], [14, 15], [15, 16], [17, 18], [18, 19],
+  [19, 20]
+];
 
-// Define the PoseNet function
-const PoseNet = function (hands) {
-    this.hands = hands;
-    this.drawingColor = 'red';
-    this.lineThickness = 5;
-};
+async function createHandLandmarker() {
+  const vision = await FilesetResolver.forVisionTasks(
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
+  );
+  handLandmarker = await HandLandmarker.createFromOptions(vision, {
+    baseOptions: {
+      modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
+      delegate: "CPU"
+    },
+    runningMode: runningMode,
+    numHands: 2
+  });
+  demosSection.classList.remove("invisible");
+}
+createHandLandmarker();
 
-// Main loop for processing frames
-PoseNet.prototype.run = function (videoElement, canvasElement, ctx) {
-    const poseNet = this;
-    const videoWidth = videoElement.videoWidth;
-    const videoHeight = videoElement.videoHeight;
+const video = document.getElementById("webcam") as HTMLVideoElement;
+const canvasElement = document.getElementById("output_canvas") as HTMLCanvasElement;
+const canvasCtx = canvasElement.getContext("2d");
 
-    // Set canvas dimensions to match video dimensions
-    canvasElement.width = videoWidth;
-    canvasElement.height = videoHeight;
+const hasGetUserMedia = () => !!navigator.mediaDevices?.getUserMedia;
 
-    function detectHands() {
-        const flippedCanvas = cv2.flip(canvasElement, 1); // Flip canvas horizontally
-        const imageData = ctx.getImageData(0, 0, canvasElement.width, canvasElement.height);
-        const frame = new cv2.Mat(videoHeight, videoWidth, cv2.CV_8UC4);
-        frame.data.set(imageData.data);
+if (hasGetUserMedia()) {
+  enableWebcamButton = document.getElementById("webcamButton");
+  enableWebcamButton.addEventListener("click", enableCam);
+} else {
+  console.warn("getUserMedia() is not supported by your browser");
+}
 
-        // Process frame with MediaPipe Hands
-        const results = poseNet.hands.process(flippedCanvas);
+function enableCam(event) {
+  if (!handLandmarker) {
+    console.log("Wait! objectDetector not loaded yet.");
+    return;
+  }
 
-        if (results.multiHandLandmarks) {
-            for (const handLandmarks of results.multiHandLandmarks) {
-                for (let idx = 0; idx < handLandmarks.landmark.length; idx++) {
-                    const landmark = handLandmarks.landmark[idx];
-                    const x = landmark.x * videoWidth;
-                    const y = landmark.y * videoHeight;
+  webcamRunning = !webcamRunning;
+  enableWebcamButton.innerText = webcamRunning ? "DISABLE PREDICTIONS" : "ENABLE PREDICTIONS";
 
-                    // Draw a circle at each detected hand landmark
-                    ctx.beginPath();
-                    ctx.fillStyle = poseNet.drawingColor;
-                    ctx.arc(x, y, poseNet.lineThickness, 0, 2 * Math.PI);
-                    ctx.fill();
-                }
-            }
-        }
+  if (webcamRunning) {
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        video.srcObject = stream;
+        video.addEventListener("loadeddata", predictWebcam);
+      })
+      .catch(error => {
+        console.error("Error accessing camera:", error);
+      });
+  } else {
+    video.srcObject = null;
+    video.removeEventListener("loadeddata", predictWebcam);
+  }
+}
 
-        // Request the next frame
-        requestAnimationFrame(detectHands);
+let lastVideoTime = -1;
+let results = undefined;
+
+async function predictWebcam() {
+  canvasElement.style.width = video.videoWidth;
+  canvasElement.style.height = video.videoHeight;
+  canvasElement.width = video.videoWidth;
+  canvasElement.height = video.videoHeight;
+
+  if (runningMode === "IMAGE") {
+    runningMode = "VIDEO";
+    await handLandmarker.setOptions({ runningMode: "VIDEO" });
+  }
+
+  let startTimeMs = performance.now();
+  if (lastVideoTime !== video.currentTime) {
+    lastVideoTime = video.currentTime;
+    results = handLandmarker.detectForVideo(video, startTimeMs);
+  }
+
+  canvasCtx.save();
+  canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+  if (results && results.landmarks) {
+    for (const landmarks of results.landmarks) {
+      drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, { color: "#00FF00", lineWidth: 5 });
+      drawLandmarks(canvasCtx, landmarks, { color: "#FF0000", lineWidth: 2 });
     }
+  }
 
-    // Start processing frames
-    detectHands();
-};
+  canvasCtx.restore();
+
+  if (webcamRunning) {
+    window.requestAnimationFrame(predictWebcam);
+  }
+}
