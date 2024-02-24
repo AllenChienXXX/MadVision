@@ -22,6 +22,12 @@ def draw_on_frame(frame, lines):
             cv2.line(frame, line[i-1], line[i], drawing_color, line_thickness)
     return frame
 
+def draw_finger(idx, fnumber):
+    if idx == fnumber:  # Index finger tip landmark id
+        h, w, c = frame.shape
+        cx, cy = int(landmark.x * w), int(landmark.y * h)
+        cv2.circle(frame, (cx, cy), 10, (255, 0, 255), cv2.FILLED)
+
 while cap.isOpened():
     ret, frame = cap.read()
     if not ret:
@@ -40,10 +46,8 @@ while cap.isOpened():
             thumb_tip = None
             index_tip = None
             for idx, landmark in enumerate(hand_landmarks.landmark):
-                if idx == 8:  # Index finger tip landmark id
-                    h, w, c = frame.shape
-                    cx, cy = int(landmark.x * w), int(landmark.y * h)
-                    cv2.circle(frame, (cx, cy), 10, (255, 0, 255), cv2.FILLED)
+                draw_finger(idx,8)
+                draw_finger(idx,4)
 
                 # Get the coordinates of the tip of the thumb and index finger
                 if idx == 4:  # Thumb tip landmark id
@@ -58,15 +62,15 @@ while cap.isOpened():
                 distance = calculate_distance(thumb_tip, index_tip)
 
                 if distance < 50:  # Threshold distance
+                    prev_point = None
+                    #don't draw
+                else:
                     # Add current finger tip position to drawing lines
                     if prev_point is not None:
-                        drawing_lines[-1].append(index_tip)
+                      drawing_lines[-1].append(index_tip)
                     else:
                         drawing_lines.append([index_tip])
                     prev_point = index_tip
-                else:
-                    prev_point = None
-
     frame = draw_on_frame(frame, drawing_lines)
 
     cv2.imshow("Finger Tip Tracking", frame)
