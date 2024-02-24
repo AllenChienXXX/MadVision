@@ -10,19 +10,15 @@
             max-width: 600px;
         }
     </style>
+    <script src="{{ url_for('static', filename='scripts/main.js') }}"></script>
 </head>
 <body>
     <h1>Camera Access Demo</h1>
     <video id="videoElement" autoplay></video>
+    <canvas id="canvasElement" style="display: none;"></canvas> <!-- Hidden canvas for drawing -->
     <script>
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(function(stream) {
-                var videoElement = document.getElementById('videoElement');
-                videoElement.srcObject = stream;
-            })
-            .catch(function(err) {
-                console.error('Error accessing the camera: ' + err);
-            });
+        const posenet = new PoseNet();
+        posenet.run();
     </script>
 </body>
 </html>

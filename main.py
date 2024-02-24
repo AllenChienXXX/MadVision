@@ -8,18 +8,6 @@ app = Flask(__name__, )
 def index():
     return render_template('index.html')
 
-def gen_frames():
-    cap = cv2.VideoCapture(0)
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-        # Convert frame to bytes for streaming
-        ret, buffer = cv2.imencode('.jpg', frame)
-        frame_bytes = buffer.tobytes()
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-
 # @app.route('/video')
 # def video():
 #     return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
