@@ -6,8 +6,9 @@ mp_hands = mp.solutions.hands
 hands = mp_hands.Hands()
 
 cap = cv2.VideoCapture(0)
+cap.set(cv2.CAP_PROP_FPS, 30)
 
-drawing_color = (255, 0, 255)  # Color for drawing
+drawing_color = (255, 255, 255)  # Color for drawing
 line_thickness = 5  # Thickness of the lines
 prev_point = None  # Previous finger tip position
 drawing_lines = []  # List to store drawing lines
@@ -34,9 +35,16 @@ while cap.isOpened():
 
     if results.multi_hand_landmarks:
         for hand_landmarks in results.multi_hand_landmarks:
+            if hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].x > hand_landmarks.landmark[mp_hands.HandLandmark.WRIST].x:
+                continue
             thumb_tip = None
             index_tip = None
             for idx, landmark in enumerate(hand_landmarks.landmark):
+                if idx == 8:  # Index finger tip landmark id
+                    h, w, c = frame.shape
+                    cx, cy = int(landmark.x * w), int(landmark.y * h)
+                    cv2.circle(frame, (cx, cy), 10, (255, 0, 255), cv2.FILLED)
+
                 # Get the coordinates of the tip of the thumb and index finger
                 if idx == 4:  # Thumb tip landmark id
                     h, w, c = frame.shape
@@ -62,6 +70,7 @@ while cap.isOpened():
     frame = draw_on_frame(frame, drawing_lines)
 
     cv2.imshow("Finger Tip Tracking", frame)
+
 
     if cv2.waitKey(10) & 0xFF == ord('q'):
         break
