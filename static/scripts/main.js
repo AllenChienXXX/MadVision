@@ -96,12 +96,13 @@ const fingertipIndex = 8; // Adjust based on your model (index finger)
 
 const points = [];
 
-const CLEAR = false;
+var CLEAR = false;
 
 //button function
 const clearButton = document.getElementById('clearButton');
-clearButton.addEventListener('click', handleClearButtonClick);
+clearButton.addEventListener("click", handleClearButtonClick);
 function handleClearButtonClick() {
+    console.log("clear")
     CLEAR = true;
 }
 
@@ -116,7 +117,7 @@ function drawFingertipTrace(fingertip) {
     // Draw trace line from previous position (if available)
     points.push([fingertip.x*video.videoWidth,fingertip.y*video.videoHeight]); // Store the point
     if(CLEAR){
-        points = [];
+        points.splice(0, points.length); // Remove all elements starting from index 0
         CLEAR = false;
     }
 
