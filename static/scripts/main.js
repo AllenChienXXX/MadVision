@@ -31,64 +31,6 @@ const createHandLandmarker = async () => {
 };
 createHandLandmarker();
 /********************************************************************
-// Demo 1: Grab a bunch of images from the page and detection them
-// upon click.
-********************************************************************/
-// In this demo, we have put all our clickable images in divs with the
-// CSS class 'detectionOnClick'. Lets get all the elements that have
-// this class.
-const imageContainers = document.getElementsByClassName("detectOnClick");
-// Now let's go through all of these and add a click event listener.
-for (let i = 0; i < imageContainers.length; i++) {
-    // Add event listener to the child element whichis the img element.
-    imageContainers[i].children[0].addEventListener("click", handleClick);
-}
-// When an image is clicked, let's detect it and display results!
-async function handleClick(event) {
-    if (!handLandmarker) {
-        console.log("Wait for handLandmarker to load before clicking!");
-        return;
-    }
-    if (runningMode === "VIDEO") {
-        runningMode = "IMAGE";
-        await handLandmarker.setOptions({ runningMode: "IMAGE" });
-    }
-    // Remove all landmarks drawed before
-    const allCanvas = event.target.parentNode.getElementsByClassName("canvas");
-    for (var i = allCanvas.length - 1; i >= 0; i--) {
-        const n = allCanvas[i];
-        n.parentNode.removeChild(n);
-    }
-    // We can call handLandmarker.detect as many times as we like with
-    // different image data each time. This returns a promise
-    // which we wait to complete and then call a function to
-    // print out the results of the prediction.
-    const handLandmarkerResult = handLandmarker.detect(event.target);
-    console.log(handLandmarkerResult.handednesses[0][0]);
-    const canvas = document.createElement("canvas");
-    canvas.setAttribute("class", "canvas");
-    canvas.setAttribute("width", event.target.naturalWidth + "px");
-    canvas.setAttribute("height", event.target.naturalHeight + "px");
-    canvas.style =
-        "left: 0px;" +
-            "top: 0px;" +
-            "width: " +
-            event.target.width +
-            "px;" +
-            "height: " +
-            event.target.height +
-            "px;";
-    event.target.parentNode.appendChild(canvas);
-    const cxt = canvas.getContext("2d");
-    for (const landmarks of handLandmarkerResult.landmarks) {
-        drawConnectors(cxt, landmarks, HAND_CONNECTIONS, {
-            color: "#00FF00",
-            lineWidth: 5
-        });
-        drawLandmarks(cxt, landmarks, { color: "#FF0000", lineWidth: 1 });
-    }
-}
-/********************************************************************
 // Demo 2: Continuously grab image from webcam stream and detect it.
 ********************************************************************/
 const video = document.getElementById("webcam");
@@ -131,13 +73,20 @@ function enableCam(event) {
 }
 let lastVideoTime = -1;
 let results = undefined;
-console.log(video);
+
+const newCanvas = document.getElementById("draw_canvas");
+const newCtx = newCanvas.getContext("2d");
+
 async function predictWebcam() {
     canvasElement.style.width = video.videoWidth;
-    ;
     canvasElement.style.height = video.videoHeight;
     canvasElement.width = video.videoWidth;
     canvasElement.height = video.videoHeight;
+
+    newCanvas.style.width = video.videoWidth;
+    newCanvas.style.height = video.videoHeight;
+    newCanvas.width = video.videoWidth;
+    newCanvas.height = video.videoHeight;
     // Now let's start detecting the stream.
     if (runningMode === "IMAGE") {
         runningMode = "VIDEO";
@@ -156,7 +105,9 @@ async function predictWebcam() {
                 color: "#00FF00",
                 lineWidth: 5
             });
+            //draw finger tips
             drawLandmarks(canvasCtx, landmarks, { color: "#FF0000", lineWidth: 2 });
+            drawLandmarks(newCtx, landmarks, { color: "#0000FF", lineWidth: 2 });
         }
     }
     canvasCtx.restore();
@@ -166,46 +117,3 @@ async function predictWebcam() {
     }
 }
 
-
-
-///////////
-function renderPoints(points) {
-    const canvas = document.getElementById('output_canvas');
-    const ctx = canvas.getContext('2d');
-
-    // Clear the canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Set point color and size
-    ctx.fillStyle = 'red';
-    const pointSize = 5;
-
-    // Render each point
-    points.forEach(point => {
-        ctx.beginPath();
-        ctx.arc(point[0], point[1], pointSize, 0, 2 * Math.PI);
-        ctx.fill();
-    });
-}
-
-// Example of streaming data
-function streamData() {
-    // Simulating real-time streaming with setInterval
-    setInterval(() => {
-        // Generate a random point (replace this with your actual data)
-        const randomX = Math.random() * 500;
-        const randomY = Math.random() * 500;
-
-        // Update the points array with the new point
-        points.push([randomX, randomY]);
-
-        // Render the updated points
-        renderPoints(points);
-    }, 1000); // Update every 1000 milliseconds (1 second)
-}
-
-// Initial points array
-const points = [];
-
-// Start streaming data
-streamData();
