@@ -197,7 +197,7 @@ async function predictWebcam() {
 //            drawLandmarks(newCtx, landmarks, { color: "#FF0000", lineWidth: 2 });
 
 //            draw trace\
-            if(calculateFingerDistance(landmarks[4],landmarks[8])<0.1){
+            if(calculateFingerDistance(landmarks[4],landmarks[8])<0.05){
 //                console.log(calculateFingerDistance(landmarks[4], landmarks[8]))
                 drawFingertipTrace(landmarks[8], true);
             }else{
