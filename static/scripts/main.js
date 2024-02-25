@@ -92,53 +92,33 @@ const newCtx = newCanvas.getContext("2d");
 const fingertipIndex = 8; // Adjust based on your model (index finger)
 
 const points = [[0,0]];
+function drawPoint(x, y) {
+    newCtx.beginPath();
+    newCtx.arc(x*video.videoWidth, y*video.videoHeight, 10, 0, Math.PI * 2);
+    newCtx.fill();
+}
+//function drawLine(x1, y1, x2, y2) {
+//    newCtx.beginPath();
+//    newCtx.moveTo(x1, y1);
+//    newCtx.lineTo(x2, y2);
+//    newCtx.stroke();
+//}
 function drawFingertipTrace(fingertip) {
     // Store previous fingertip positions for tracing
     // Draw trace line from previous position (if available)
-
     console.log("drawing")
-    var x = fingertip.x*video.videoWidth
-    var y = fingertip.y*video.videoHeight
+
+    points.push([fingertip.x*video.videoWidth,fingertip.y*video.videoHeight]); // Store the point
+
+    if (points.length < 2) return; // Need at least 2 points to draw a line
     newCtx.beginPath();
-    newCtx.arc(x, y, 15, 0, Math.PI * 2);
-    newCtx.fill();
-    points.push({ x: x, y: y }); // Store the point
-
-    function redrawPoints() {
-        points.forEach(point => {
-        drawPoint(point.x, point.y);
-    });
+    newCtx.moveTo(points[0][0], points[0][1]);
+    for (let i = 1; i < points.length; i++) {
+        newCtx.lineTo(points[i][0], points[i][1]);
     }
-
-
-//        newCtx.strokeStyle = "blue"; // Adjust color as desired
-//        newCtx.lineWidth = 20; // Adjust line width as desired
-////        newCtx.moveTo(200,100)
-//        var distance = calculateDistance(fingertip.x*video.videoWidth,fingertip.y*video.videoHeight,previousTips[previousTips.length-1][0]*video.videoWidth, previousTips[previousTips.length-1][1]*video.videoHeight)
-//        console.log(distance)
-//        if(distance<5){
-//            newCtx.moveTo(previousTips[previousTips.length-1][0]*video.videoWidth, previousTips[previousTips.length-1][1]*video.videoHeight);
-////            console.log(previousTips[previousTips.length-1][0]*video.videoWidth)
-////            console.log(previousTips[previousTips.length-1][1]*video.videoHeight)
-//    //        console.log(previousTips)
-//
-//            newCtx.lineTo(fingertip.x*video.videoWidth, fingertip.y*video.videoHeight);
-//    //        newCtx.lineTo(300,200)
-//            newCtx.stroke();
-        newCtx.save();
-//
-//        }else{
-//            previousTips.push([fingertip.x, fingertip.y]);
-//        }
-    }
-    // Update previous tip position for next frame
-    previousTips.slice(1)
-
-
-// console.log(previousTips[previousTips.length-1][1])
-    // Clear the trace canvas to avoid accumulation of lines
-//    newCtx.clearRect(0, 0, newCanvas.width, newCanvas.height);
+    newCtx.stroke();
 }
+
 
 async function predictWebcam() {
     newCanvas.style.width = video.videoWidth;
