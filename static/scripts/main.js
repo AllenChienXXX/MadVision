@@ -8,6 +8,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+import * as utils from './utils.js';
 import { HandLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0";
 const demosSection = document.getElementById("demos");
 let handLandmarker = undefined;
@@ -112,41 +113,46 @@ function drawPoint(x, y) {
     newCtx.fill();
 }
 
-function drawFingertipTrace(fingertip) {
+function drawFingertipTrace(fingertip, adddraw) {
     // Store previous fingertip positions for tracing
     // Draw trace line from previous position (if available)
-    points.push([fingertip.x*video.videoWidth,fingertip.y*video.videoHeight]); // Store the point
-    if(CLEAR){
+    if(CLEAR || points.length>10000){
         points.splice(0, points.length); // Remove all elements starting from index 0
         CLEAR = false;
     }
 
-    if (points.length < 2) return; // Need at least 2 points to draw a line
-    newCtx.beginPath();
-    newCtx.moveTo(points[0][0], points[0][1]);
-    for (let i = 1; i < points.length; i++) {
-        newCtx.lineTo(points[i][0], points[i][1]);
+    if(adddraw){
+        points.push([fingertip.x*video.videoWidth,fingertip.y*video.videoHeight]); // Store the point
     }
-    newCtx.stroke();
+    if (points.length < 2) return; // Need at least 2 points to draw a line
+
+    let prevPoint = points[0];
+    newCtx.strokeStyle = 'blue';
+    newCtx.lineWidth = 2;
+   for (let i = 1; i < points.length; i++) {
+        const currentPoint = points[i];
+        const distance = calculateDistance(currentPoint[0],currentPoint[1],prevPoint[0],prevPoint[1])
+        console.log(distance)
+        if (distance > 30) {
+            // Start a new line
+            newCtx.beginPath();
+            newCtx.moveTo(currentPoint[0], currentPoint[1]);
+        } else {
+            // Continue drawing on the same line
+            newCtx.lineTo(currentPoint[0], currentPoint[1]);
+            newCtx.stroke();
+        }
+        prevPoint = currentPoint;
+    }
 }
 
 function calculateFingerDistance(finger1, finger2) {
-    const dx = (finger2.x - finger1.x)*video.videoWidth;
-    const dy = (finger2.y - finger1.y)*video.videoHeight;
-    return Math.sqrt(Math.abs(dx * dx + dy * dy));
+    const dx = (finger2.x - finger1.x);
+    const dy = (finger2.y - finger1.y);
+    const dz = (finger2.z - finger1.z);
+
+    return Math.sqrt(Math.abs(dx * dx + dy * dy + dz * dz));
 }
-
-function checkrange(thumbTip, indexFingerTip, middleFingerTip, range) {
-    // Calculate distances between finger tips
-    const distanceThumbIndex = calculateFingerDistance(thumbTip, indexFingerTip);
-    const distanceThumbMiddle = calculateFingerDistance(thumbTip, middleFingerTip);
-    const distanceIndexMiddle = calculateFingerDistance(indexFingerTip, middleFingerTip);
-
-    // Check if all distances are within the specified range
-    return distanceThumbIndex <= range && distanceThumbMiddle <= range && distanceIndexMiddle <= range;
-}
-
-
 
 
 async function predictWebcam() {
@@ -191,9 +197,12 @@ async function predictWebcam() {
 //            drawLandmarks(newCtx, landmarks, { color: "#FF0000", lineWidth: 2 });
 
 //            draw trace\
-            if(checkrange(landmarks[4],landmarks[8],landmarks[12],50)){
-//                console.log(calculateDistanceBetweenFingers(landmarks[4], landmarks[8]))
-                drawFingertipTrace(landmarks[8]);
+            if(calculateFingerDistance(landmarks[4],landmarks[8])<0.1){
+//                console.log(calculateFingerDistance(landmarks[4], landmarks[8]))
+                drawFingertipTrace(landmarks[8], true);
+            }else{
+                drawFingertipTrace(landmarks[8], false);
+
             }
 
         }
