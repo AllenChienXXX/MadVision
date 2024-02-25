@@ -33,9 +33,14 @@ createHandLandmarker();
 /********************************************************************
 // Demo 2: Continuously grab image from webcam stream and detect it.
 ********************************************************************/
+// flip the wwb cam
+document.getElementById("webcam").style.transform = "scaleX(-1)";
+
 const video = document.getElementById("webcam");
 const canvasElement = document.getElementById("output_canvas");
 const canvasCtx = canvasElement.getContext("2d");
+
+
 // Check if webcam access is supported.
 const hasGetUserMedia = () => { var _a; return !!((_a = navigator.mediaDevices) === null || _a === void 0 ? void 0 : _a.getUserMedia); };
 // If webcam supported, add event listener to button for when user
@@ -71,27 +76,94 @@ function enableCam(event) {
         video.addEventListener("loadeddata", predictWebcam);
     });
 }
+
+function calculateDistance(x1, y1, x2, y2) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
 let lastVideoTime = -1;
 let results = undefined;
 
 const newCanvas = document.getElementById("draw_canvas");
 const newCtx = newCanvas.getContext("2d");
 
-async function predictWebcam() {
-    canvasElement.style.width = video.videoWidth;
-    canvasElement.style.height = video.videoHeight;
-    canvasElement.width = video.videoWidth;
-    canvasElement.height = video.videoHeight;
+const fingertipIndex = 8; // Adjust based on your model (index finger)
 
+const points = [[0,0]];
+function drawFingertipTrace(fingertip) {
+    // Store previous fingertip positions for tracing
+    // Draw trace line from previous position (if available)
+
+    console.log("drawing")
+    var x = fingertip.x*video.videoWidth
+    var y = fingertip.y*video.videoHeight
+    newCtx.beginPath();
+    newCtx.arc(x, y, 15, 0, Math.PI * 2);
+    newCtx.fill();
+    points.push({ x: x, y: y }); // Store the point
+
+    function redrawPoints() {
+        points.forEach(point => {
+        drawPoint(point.x, point.y);
+    });
+    }
+
+
+//        newCtx.strokeStyle = "blue"; // Adjust color as desired
+//        newCtx.lineWidth = 20; // Adjust line width as desired
+////        newCtx.moveTo(200,100)
+//        var distance = calculateDistance(fingertip.x*video.videoWidth,fingertip.y*video.videoHeight,previousTips[previousTips.length-1][0]*video.videoWidth, previousTips[previousTips.length-1][1]*video.videoHeight)
+//        console.log(distance)
+//        if(distance<5){
+//            newCtx.moveTo(previousTips[previousTips.length-1][0]*video.videoWidth, previousTips[previousTips.length-1][1]*video.videoHeight);
+////            console.log(previousTips[previousTips.length-1][0]*video.videoWidth)
+////            console.log(previousTips[previousTips.length-1][1]*video.videoHeight)
+//    //        console.log(previousTips)
+//
+//            newCtx.lineTo(fingertip.x*video.videoWidth, fingertip.y*video.videoHeight);
+//    //        newCtx.lineTo(300,200)
+//            newCtx.stroke();
+        newCtx.save();
+//
+//        }else{
+//            previousTips.push([fingertip.x, fingertip.y]);
+//        }
+    }
+    // Update previous tip position for next frame
+    previousTips.slice(1)
+
+
+// console.log(previousTips[previousTips.length-1][1])
+    // Clear the trace canvas to avoid accumulation of lines
+//    newCtx.clearRect(0, 0, newCanvas.width, newCanvas.height);
+}
+
+async function predictWebcam() {
     newCanvas.style.width = video.videoWidth;
     newCanvas.style.height = video.videoHeight;
     newCanvas.width = video.videoWidth;
     newCanvas.height = video.videoHeight;
+
+    canvasElement.style.width = video.videoWidth;
+    canvasElement.style.height = video.videoHeight;
+    canvasElement.width = video.videoWidth;
+    canvasElement.height = video.videoHeight;
     // Now let's start detecting the stream.
     if (runningMode === "IMAGE") {
         runningMode = "VIDEO";
         await handLandmarker.setOptions({ runningMode: "VIDEO" });
     }
+
+    canvasCtx.save();
+    canvasCtx.translate(canvasElement.width, 0);
+    canvasCtx.scale(-1, 1);
+
+    newCtx.save();
+    newCtx.translate(newCanvas.width, 0);
+    newCtx.scale(-1, 1);
+
     let startTimeMs = performance.now();
     if (lastVideoTime !== video.currentTime) {
         lastVideoTime = video.currentTime;
@@ -99,15 +171,21 @@ async function predictWebcam() {
     }
     canvasCtx.save();
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
     if (results.landmarks) {
         for (const landmarks of results.landmarks) {
             drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {
                 color: "#00FF00",
                 lineWidth: 5
             });
-            //draw finger tips
-            drawLandmarks(canvasCtx, landmarks, { color: "#FF0000", lineWidth: 2 });
-            drawLandmarks(newCtx, landmarks, { color: "#0000FF", lineWidth: 2 });
+            drawLandmarks(canvasCtx, landmarks, { color: "#FFFF00", lineWidth: 2 });
+//            drawLandmarks(newCtx, landmarks, { color: "#FF0000", lineWidth: 2 });
+
+//            draw trace
+            const fingertipLandmark = landmarks[8];
+            if (fingertipLandmark) {
+              drawFingertipTrace(fingertipLandmark);
+            }
         }
     }
     canvasCtx.restore();
@@ -116,4 +194,3 @@ async function predictWebcam() {
         window.requestAnimationFrame(predictWebcam);
     }
 }
-
