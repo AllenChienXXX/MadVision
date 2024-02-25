@@ -165,3 +165,47 @@ async function predictWebcam() {
         window.requestAnimationFrame(predictWebcam);
     }
 }
+
+
+
+///////////
+function renderPoints(points) {
+    const canvas = document.getElementById('output_canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Clear the canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Set point color and size
+    ctx.fillStyle = 'red';
+    const pointSize = 5;
+
+    // Render each point
+    points.forEach(point => {
+        ctx.beginPath();
+        ctx.arc(point[0], point[1], pointSize, 0, 2 * Math.PI);
+        ctx.fill();
+    });
+}
+
+// Example of streaming data
+function streamData() {
+    // Simulating real-time streaming with setInterval
+    setInterval(() => {
+        // Generate a random point (replace this with your actual data)
+        const randomX = Math.random() * 500;
+        const randomY = Math.random() * 500;
+
+        // Update the points array with the new point
+        points.push([randomX, randomY]);
+
+        // Render the updated points
+        renderPoints(points);
+    }, 1000); // Update every 1000 milliseconds (1 second)
+}
+
+// Initial points array
+const points = [];
+
+// Start streaming data
+streamData();
